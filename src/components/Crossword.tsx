@@ -23,6 +23,10 @@ interface CrosswordProps {
     across: Clue[];
     down: Clue[];
   };
+  selectedCell: [number, number] | null;
+  setSelectedCell: (cell: [number, number]) => void;
+  direction: 'across' | 'down';
+  setDirection: (dir: 'across' | 'down') => void;
 }
 
 const CellInput = styled(TextField)(({ theme }) => ({
@@ -49,10 +53,8 @@ const CellInput = styled(TextField)(({ theme }) => ({
   },
 }));
 
-const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
+const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSelectedCell, direction, setDirection }) => {
   const [grid, setGrid] = useState<Cell[][]>([]);
-  const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
-  const [direction, setDirection] = useState<'across' | 'down'>('across');
   const inputRefs = React.useRef<(HTMLInputElement | null)[][]>([]);
 
   useEffect(() => {
@@ -72,16 +74,13 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
 
   const handleCellClick = (row: number, col: number) => {
     if (grid[row][col].isBlack) return;
-
     const newGrid = grid.map(row => row.map(cell => ({
       ...cell,
       isSelected: false,
       isHighlighted: false,
     })));
-
     newGrid[row][col].isSelected = true;
     setSelectedCell([row, col]);
-
     // Highlight cells in the current word
     if (direction === 'across') {
       for (let c = 0; c < size; c++) {
@@ -96,10 +95,7 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
         }
       }
     }
-
     setGrid(newGrid);
-    
-    // Focus the input field and select text if present
     setTimeout(() => {
       const input = inputRefs.current[row][col];
       if (input) {
@@ -113,11 +109,9 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
 
   const handleKeyPress = (event: React.KeyboardEvent, row: number, col: number) => {
     if (!selectedCell) return;
-
     const [selectedRow, selectedCol] = selectedCell;
     let nextRow = selectedRow;
     let nextCol = selectedCol;
-
     if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
       setDirection('across');
       nextCol = event.key === 'ArrowRight' ? selectedCol + 1 : selectedCol - 1;
@@ -125,7 +119,6 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
       setDirection('down');
       nextRow = event.key === 'ArrowDown' ? selectedRow + 1 : selectedRow - 1;
     }
-
     if (nextRow >= 0 && nextRow < size && nextCol >= 0 && nextCol < size && !grid[nextRow][nextCol].isBlack) {
       handleCellClick(nextRow, nextCol);
     }
