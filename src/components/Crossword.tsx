@@ -53,6 +53,7 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
   const [grid, setGrid] = useState<Cell[][]>([]);
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
   const [direction, setDirection] = useState<'across' | 'down'>('across');
+  const inputRefs = React.useRef<(HTMLInputElement | null)[][]>([]);
 
   useEffect(() => {
     // Initialize empty grid
@@ -65,6 +66,8 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
       }))
     );
     setGrid(newGrid);
+    // Initialize refs array
+    inputRefs.current = Array(size).fill(null).map(() => Array(size).fill(null));
   }, [size]);
 
   const handleCellClick = (row: number, col: number) => {
@@ -95,6 +98,11 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
     }
 
     setGrid(newGrid);
+    
+    // Focus the input field
+    setTimeout(() => {
+      inputRefs.current[row][col]?.focus();
+    }, 0);
   };
 
   const handleKeyPress = (event: React.KeyboardEvent, row: number, col: number) => {
@@ -179,11 +187,55 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
                   )}
                   <CellInput
                     value={cell.value}
+                    inputRef={(el) => {
+                      inputRefs.current[rowIndex][colIndex] = el;
+                    }}
                     onChange={(e) => {
                       const newValue = e.target.value.slice(-1).toUpperCase();
                       const newGrid = [...grid];
                       newGrid[rowIndex][colIndex].value = newValue;
                       setGrid(newGrid);
+
+                      // Move to next cell if a letter was entered
+                      if (newValue) {
+                        let nextRow = rowIndex;
+                        let nextCol = colIndex;
+
+                        if (direction === 'across') {
+                          nextCol = colIndex + 1;
+                          if (nextCol >= size || grid[rowIndex][nextCol].isBlack) {
+                            nextCol = 0;
+                            nextRow = rowIndex + 1;
+                          }
+                        } else {
+                          nextRow = rowIndex + 1;
+                          if (nextRow >= size || grid[nextRow][colIndex].isBlack) {
+                            nextRow = 0;
+                            nextCol = colIndex + 1;
+                          }
+                        }
+
+                        // Find the next valid cell
+                        while (nextRow < size && nextCol < size && grid[nextRow][nextCol].isBlack) {
+                          if (direction === 'across') {
+                            nextCol++;
+                            if (nextCol >= size) {
+                              nextCol = 0;
+                              nextRow++;
+                            }
+                          } else {
+                            nextRow++;
+                            if (nextRow >= size) {
+                              nextRow = 0;
+                              nextCol++;
+                            }
+                          }
+                        }
+
+                        if (nextRow < size && nextCol < size) {
+                          handleCellClick(nextRow, nextCol);
+                        }
+                      }
                     }}
                     onKeyDown={(e) => handleKeyPress(e, rowIndex, colIndex)}
                     inputProps={{
