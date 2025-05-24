@@ -1,12 +1,6 @@
 import React from 'react';
-import { Box, Typography, List, ListItem, ListItemText, Paper } from '@mui/material';
-
-interface Clue {
-  number: number;
-  clue: string;
-  answer: string;
-  direction: 'across' | 'down';
-}
+import { Box, Typography, List, ListItem, ListItemText, Paper, ListItemButton } from '@mui/material';
+import type { Clue } from '../types';
 
 interface ClueListProps {
   clues: {
@@ -26,21 +20,21 @@ const ClueList: React.FC<ClueListProps> = ({ clues, selectedClue, onClueSelect }
         </Typography>
         <List dense>
           {clues.across.map((clue) => (
-            <ListItem
-              key={`across-${clue.number}`}
-              button
-              selected={selectedClue?.number === clue.number && selectedClue?.direction === 'across'}
-              onClick={() => onClueSelect(clue)}
-            >
-              <ListItemText
-                primary={`${clue.number}. ${clue.clue}`}
-                primaryTypographyProps={{
-                  variant: 'body2',
-                  color: selectedClue?.number === clue.number && selectedClue?.direction === 'across'
-                    ? 'primary'
-                    : 'textPrimary',
-                }}
-              />
+            <ListItem key={`across-${clue.number}`} disablePadding>
+              <ListItemButton
+                selected={selectedClue?.number === clue.number && selectedClue?.direction === 'across'}
+                onClick={() => onClueSelect(clue)}
+              >
+                <ListItemText
+                  primary={`${clue.number}. ${clue.clue}`}
+                  primaryTypographyProps={{
+                    variant: 'body2',
+                    color: selectedClue?.number === clue.number && selectedClue?.direction === 'across'
+                      ? 'primary'
+                      : 'textPrimary',
+                  }}
+                />
+              </ListItemButton>
             </ListItem>
           ))}
         </List>
@@ -52,21 +46,21 @@ const ClueList: React.FC<ClueListProps> = ({ clues, selectedClue, onClueSelect }
         </Typography>
         <List dense>
           {clues.down.map((clue) => (
-            <ListItem
-              key={`down-${clue.number}`}
-              button
-              selected={selectedClue?.number === clue.number && selectedClue?.direction === 'down'}
-              onClick={() => onClueSelect(clue)}
-            >
-              <ListItemText
-                primary={`${clue.number}. ${clue.clue}`}
-                primaryTypographyProps={{
-                  variant: 'body2',
-                  color: selectedClue?.number === clue.number && selectedClue?.direction === 'down'
-                    ? 'primary'
-                    : 'textPrimary',
-                }}
-              />
+            <ListItem key={`down-${clue.number}`} disablePadding>
+              <ListItemButton
+                selected={selectedClue?.number === clue.number && selectedClue?.direction === 'down'}
+                onClick={() => onClueSelect(clue)}
+              >
+                <ListItemText
+                  primary={`${clue.number}. ${clue.clue}`}
+                  primaryTypographyProps={{
+                    variant: 'body2',
+                    color: selectedClue?.number === clue.number && selectedClue?.direction === 'down'
+                      ? 'primary'
+                      : 'textPrimary',
+                  }}
+                />
+              </ListItemButton>
             </ListItem>
           ))}
         </List>

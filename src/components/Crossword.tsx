@@ -99,9 +99,15 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
 
     setGrid(newGrid);
     
-    // Focus the input field
+    // Focus the input field and select text if present
     setTimeout(() => {
-      inputRefs.current[row][col]?.focus();
+      const input = inputRefs.current[row][col];
+      if (input) {
+        input.focus();
+        if (grid[row][col].value) {
+          input.select();
+        }
+      }
     }, 0);
   };
 
@@ -189,6 +195,11 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
                     value={cell.value}
                     inputRef={(el) => {
                       inputRefs.current[rowIndex][colIndex] = el;
+                    }}
+                    onFocus={(e) => {
+                      if (cell.value) {
+                        e.target.select();
+                      }
                     }}
                     onChange={(e) => {
                       const newValue = e.target.value.slice(-1).toUpperCase();
