@@ -196,27 +196,47 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
                       newGrid[rowIndex][colIndex].value = newValue;
                       setGrid(newGrid);
 
-                      // Move to next cell if a letter was entered
-                      if (newValue) {
+                      // Move to next cell if a letter was entered or if cell already had text
+                      if (newValue || cell.value) {
                         let nextRow = rowIndex;
                         let nextCol = colIndex;
+                        let foundEmpty = false;
 
+                        // First try to find an empty cell in the current direction
                         if (direction === 'across') {
-                          nextCol = colIndex + 1;
-                          if (nextCol >= size || grid[rowIndex][nextCol].isBlack) {
-                            nextCol = 0;
+                          for (let c = colIndex + 1; c < size; c++) {
+                            if (!grid[rowIndex][c].isBlack && !grid[rowIndex][c].value) {
+                              nextCol = c;
+                              foundEmpty = true;
+                              break;
+                            }
+                          }
+                          if (!foundEmpty) {
+                            // If no empty cells found, move to next row
                             nextRow = rowIndex + 1;
+                            nextCol = 0;
                           }
                         } else {
-                          nextRow = rowIndex + 1;
-                          if (nextRow >= size || grid[nextRow][colIndex].isBlack) {
+                          for (let r = rowIndex + 1; r < size; r++) {
+                            if (!grid[r][colIndex].isBlack && !grid[r][colIndex].value) {
+                              nextRow = r;
+                              foundEmpty = true;
+                              break;
+                            }
+                          }
+                          if (!foundEmpty) {
+                            // If no empty cells found, move to next column
                             nextRow = 0;
                             nextCol = colIndex + 1;
                           }
                         }
 
-                        // Find the next valid cell
-                        while (nextRow < size && nextCol < size && grid[nextRow][nextCol].isBlack) {
+                        // Find the next valid cell (skip black cells)
+                        while (nextRow < size && nextCol < size) {
+                          if (!grid[nextRow][nextCol].isBlack) {
+                            handleCellClick(nextRow, nextCol);
+                            break;
+                          }
                           if (direction === 'across') {
                             nextCol++;
                             if (nextCol >= size) {
@@ -230,10 +250,6 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues }) => {
                               nextCol++;
                             }
                           }
-                        }
-
-                        if (nextRow < size && nextCol < size) {
-                          handleCellClick(nextRow, nextCol);
                         }
                       }
                     }}
