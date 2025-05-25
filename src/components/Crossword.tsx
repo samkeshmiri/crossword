@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Grid, TextField, Typography, Paper } from '@mui/material';
+import { Box, TextField, Typography, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 interface Cell {
@@ -29,7 +29,7 @@ interface CrosswordProps {
   setDirection: (dir: 'across' | 'down') => void;
 }
 
-const CellInput = styled(TextField)(({ theme }) => ({
+const CellInput = styled(TextField)(() => ({
   '& .MuiInputBase-input': {
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -53,7 +53,7 @@ const CellInput = styled(TextField)(({ theme }) => ({
   },
 }));
 
-const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSelectedCell, direction, setDirection }) => {
+const Crossword: React.FC<CrosswordProps> = ({ size, selectedCell, setSelectedCell, direction, setDirection }) => {
   const [grid, setGrid] = useState<Cell[][]>([]);
   const inputRefs = React.useRef<(HTMLInputElement | null)[][]>([]);
 
@@ -107,7 +107,7 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
     }, 0);
   };
 
-  const handleKeyPress = (event: React.KeyboardEvent, row: number, col: number) => {
+  const handleKeyPress = (event: React.KeyboardEvent) => {
     if (!selectedCell) return;
     const [selectedRow, selectedCol] = selectedCell;
     let nextRow = selectedRow;
@@ -257,7 +257,7 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
                         }
                       }
                     }}
-                    onKeyDown={(e) => handleKeyPress(e, rowIndex, colIndex)}
+                    onKeyDown={(e) => handleKeyPress(e)}
                     inputProps={{
                       maxLength: 1,
                       style: { textAlign: 'center' },
