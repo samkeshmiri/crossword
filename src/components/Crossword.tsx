@@ -112,13 +112,30 @@ const Crossword: React.FC<CrosswordProps> = ({ size, selectedCell, setSelectedCe
     const [selectedRow, selectedCol] = selectedCell;
     let nextRow = selectedRow;
     let nextCol = selectedCol;
-    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+
+    if (event.key === 'Backspace' && !grid[selectedRow][selectedCol].value) {
+      // Move to previous cell when backspace is pressed on empty cell
+      if (direction === 'across') {
+        nextCol = selectedCol - 1;
+        if (nextCol < 0) {
+          nextCol = size - 1;
+          nextRow = selectedRow - 1;
+        }
+      } else {
+        nextRow = selectedRow - 1;
+        if (nextRow < 0) {
+          nextRow = size - 1;
+          nextCol = selectedCol - 1;
+        }
+      }
+    } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
       setDirection('across');
       nextCol = event.key === 'ArrowRight' ? selectedCol + 1 : selectedCol - 1;
     } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       setDirection('down');
       nextRow = event.key === 'ArrowDown' ? selectedRow + 1 : selectedRow - 1;
     }
+
     if (nextRow >= 0 && nextRow < size && nextCol >= 0 && nextCol < size && !grid[nextRow][nextCol].isBlack) {
       handleCellClick(nextRow, nextCol);
     }
@@ -265,6 +282,7 @@ const Crossword: React.FC<CrosswordProps> = ({ size, selectedCell, setSelectedCe
                     variant="outlined"
                     size="small"
                     fullWidth
+                    autoComplete="off"
                   />
                 </Box>
               )}
