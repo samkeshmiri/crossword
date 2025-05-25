@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import Crossword from './components/Crossword';
-import ClueList from './components/ClueList';
-
 // Sample puzzle data
 const samplePuzzle = {
   size: 5,
@@ -28,7 +26,6 @@ const samplePuzzle = {
 import type { Clue } from './types';
 
 function App() {
-  const [selectedClue, setSelectedClue] = useState<Clue | undefined>();
   const [seconds, setSeconds] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
