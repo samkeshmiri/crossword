@@ -32,7 +32,7 @@ const samplePuzzle: MiniCrosswordPuzzle = {
       { number: 2, clue: "To move through water", row: 0, col: 1, length: 5, answer: "WATER" },
       { number: 3, clue: "Not off", row: 0, col: 2, length: 5, answer: "ABOUT" },
       { number: 4, clue: "A Spanish game", row: 0, col: 3, length: 5, answer: "MONTE" },
-      { number: 5, clue: "Not in", row: 0, col: 4, length: 5, answer: "PRESS" },
+      { number: 5, clue: "Irish cupboard", row: 0, col: 4, length: 5, answer: "PRESS" },
     ],
   },
 };
