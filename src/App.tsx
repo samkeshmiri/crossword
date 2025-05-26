@@ -1,30 +1,41 @@
 import { useState, useEffect } from 'react';
 import { Container, Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import Crossword from './components/Crossword';
+import type { MiniCrosswordPuzzle, Clue } from '../types';
+
 // Sample puzzle data
-// TODO update samplePuzzle to match a schema in which Crossword.tsx can use it
-const samplePuzzle = {
-  size: 5,
+const samplePuzzle: MiniCrosswordPuzzle = {
+  date: "2025-01-20",
+  puzzle_id: "sample-mini-1",
+  title: "Sample Mini Crossword",
+  size: {
+    rows: 5,
+    cols: 5
+  },
+  grid: [
+    ["", "", "", "", ""],
+    ["", "", "", "", ""],
+    ["", "", "", "", ""],
+    ["", "", "", "", ""],
+    ["", "", "", "", ""]
+  ],
   clues: {
     across: [
-      { number: 1, clue: "Wetland area", answer: "SWAMP", direction: 'across' as const },
-      { number: 4, clue: "Work or toil", answer: "LABOR", direction: 'across' as const },
-      { number: 6, clue: "By oneself", answer: "ALONE", direction: 'across' as const },
-      { number: 8, clue: "Promiscuous people", answer: "SLUTS", direction: 'across' as const },
-      { number: 10, clue: "Strongly dislikes", answer: "HATES", direction: 'across' as const },
+      { number: 1, clue: "Wetland area", row: 0, col: 0, length: 5, answer: "SWAMP" },
+      { number: 4, clue: "Work or toil", row: 1, col: 0, length: 5, answer: "LABOR" },
+      { number: 6, clue: "By oneself", row: 2, col: 0, length: 5, answer: "ALONE" },
+      { number: 8, clue: "Promiscuous people", row: 3, col: 0, length: 5, answer: "SLUTS" },
+      { number: 10, clue: "Strongly dislikes", row: 4, col: 0, length: 5, answer: "HATES" },
     ],
     down: [
-      { number: 1, clue: "Opposite of fast", answer: "SLASH", direction: 'down' as const },
-      { number: 2, clue: "To move through water", answer: "WATER", direction: 'down' as const },
-      { number: 3, clue: "Not off", answer: "ABOUT", direction: 'down' as const },
-      { number: 4, clue: "Not out", answer: "MONEY", direction: 'down' as const },
-      { number: 5, clue: "Not in", answer: "PRESS", direction: 'down' as const },
+      { number: 1, clue: "Opposite of fast", row: 0, col: 0, length: 5, answer: "SLASH" },
+      { number: 2, clue: "To move through water", row: 0, col: 1, length: 5, answer: "WATER" },
+      { number: 3, clue: "Not off", row: 0, col: 2, length: 5, answer: "ABOUT" },
+      { number: 4, clue: "Not out", row: 0, col: 3, length: 5, answer: "MONEY" },
+      { number: 5, clue: "Not in", row: 0, col: 4, length: 5, answer: "PRESS" },
     ],
   },
 };
-
-// Import Clue type from ClueList
-import type { Clue } from './types';
 
 function App() {
   const [seconds, setSeconds] = useState(0);
@@ -56,11 +67,15 @@ function App() {
     // Find the clue whose answer covers the selected cell in the given direction
     const clueList = clues[direction];
     for (const clue of clueList) {
-      // For simplicity, assume clues are placed in order and answers are contiguous
-      // (A real crossword would need a mapping of clue to grid positions)
-      // Here, we just match by number for demo purposes
-      if (clue.number === (row + 1) || clue.number === (col + 1)) {
-        return clue;
+      // Check if the selected cell is within the clue's answer range
+      if (direction === 'across') {
+        if (clue.row === row && col >= clue.col && col < clue.col + clue.length) {
+          return clue;
+        }
+      } else {
+        if (clue.col === col && row >= clue.row && row < clue.row + clue.length) {
+          return clue;
+        }
       }
     }
     return null;
@@ -86,8 +101,7 @@ function App() {
             minWidth: 0,
           }}>
             <Crossword 
-              size={samplePuzzle.size} 
-              clues={samplePuzzle.clues}
+              puzzle={samplePuzzle}
               selectedCell={selectedCell}
               setSelectedCell={setSelectedCell}
               direction={direction}

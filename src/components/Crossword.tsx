@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, Typography, Paper, Snackbar, Alert } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import type { MiniCrosswordPuzzle, Clue } from '../../types';
 
 interface Cell {
   value: string;
@@ -10,19 +11,8 @@ interface Cell {
   isHighlighted: boolean;
 }
 
-interface Clue {
-  number: number;
-  clue: string;
-  answer: string;
-  direction: 'across' | 'down';
-}
-
 interface CrosswordProps {
-  size: number;
-  clues: {
-    across: Clue[];
-    down: Clue[];
-  };
+  puzzle: MiniCrosswordPuzzle;
   selectedCell: [number, number] | null;
   setSelectedCell: (cell: [number, number]) => void;
   direction: 'across' | 'down';
@@ -53,15 +43,16 @@ const CellInput = styled(TextField)(() => ({
   },
 }));
 
-const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSelectedCell, direction, setDirection }) => {
+const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelectedCell, direction, setDirection }) => {
+  const { size, clues } = puzzle;
   const [grid, setGrid] = useState<Cell[][]>([]);
   const [showErrorBanner, setShowErrorBanner] = useState(false);
   const inputRefs = React.useRef<(HTMLInputElement | null)[][]>([]);
 
   useEffect(() => {
     // Initialize empty grid
-    const newGrid: Cell[][] = Array(size).fill(null).map(() =>
-      Array(size).fill(null).map(() => ({
+    const newGrid: Cell[][] = Array(size.rows).fill(null).map(() =>
+      Array(size.cols).fill(null).map(() => ({
         value: '',
         isBlack: false,
         isSelected: false,
@@ -70,7 +61,7 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
     );
     setGrid(newGrid);
     // Initialize refs array
-    inputRefs.current = Array(size).fill(null).map(() => Array(size).fill(null));
+    inputRefs.current = Array(size.rows).fill(null).map(() => Array(size.cols).fill(null));
   }, [size]);
 
   const handleCellClick = (row: number, col: number) => {
@@ -84,13 +75,13 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
     setSelectedCell([row, col]);
     // Highlight cells in the current word
     if (direction === 'across') {
-      for (let c = 0; c < size; c++) {
+      for (let c = 0; c < size.cols; c++) {
         if (!newGrid[row][c].isBlack) {
           newGrid[row][c].isHighlighted = true;
         }
       }
     } else {
-      for (let r = 0; r < size; r++) {
+      for (let r = 0; r < size.rows; r++) {
         if (!newGrid[r][col].isBlack) {
           newGrid[r][col].isHighlighted = true;
         }
@@ -119,13 +110,13 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
       if (direction === 'across') {
         nextCol = selectedCol - 1;
         if (nextCol < 0) {
-          nextCol = size - 1;
+          nextCol = size.cols - 1;
           nextRow = selectedRow - 1;
         }
       } else {
         nextRow = selectedRow - 1;
         if (nextRow < 0) {
-          nextRow = size - 1;
+          nextRow = size.rows - 1;
           nextCol = selectedCol - 1;
         }
       }
@@ -137,15 +128,15 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
       nextRow = event.key === 'ArrowDown' ? selectedRow + 1 : selectedRow - 1;
     }
 
-    if (nextRow >= 0 && nextRow < size && nextCol >= 0 && nextCol < size && !grid[nextRow][nextCol].isBlack) {
+    if (nextRow >= 0 && nextRow < size.rows && nextCol >= 0 && nextCol < size.cols && !grid[nextRow][nextCol].isBlack) {
       handleCellClick(nextRow, nextCol);
     }
   };
 
   // Function to check if all cells are filled
   const isGridComplete = (grid: Cell[][]): boolean => {
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col < size; col++) {
+    for (let row = 0; row < size.rows; row++) {
+      for (let col = 0; col < size.cols; col++) {
         if (!grid[row][col].isBlack && !grid[row][col].value) {
           return false;
         }
@@ -154,55 +145,25 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
     return true;
   };
 
-  // Create a mapping of clue numbers to grid positions
-  const createCluePositionMap = () => {
-    const positionMap: { [key: string]: [number, number] } = {};
-    
-    // Generate positions dynamically based on clue structure
-    // For a simple grid where clues are arranged sequentially
-    
-    // Map across clues to their starting positions
-    clues.across.forEach((clue, index) => {
-      const key = `${clue.number}-across`;
-      // For this simple layout, across clues start at the beginning of each row
-      positionMap[key] = [index, 0];
-    });
-    
-    // Map down clues to their starting positions  
-    clues.down.forEach((clue, index) => {
-      const key = `${clue.number}-down`;
-      // For this simple layout, down clues start at the top of each column
-      positionMap[key] = [0, index];
-    });
-    
-    return positionMap;
-  };
-
   // Function to extract answer from grid for a specific clue
   const extractAnswerFromGrid = (grid: Cell[][], clue: Clue): string => {
-    const positionMap = createCluePositionMap();
-    const key = `${clue.number}-${clue.direction}`;
-    const position = positionMap[key];
-    
-    if (!position) {
-      console.warn(`No position found for clue ${key}`);
-      return '';
-    }
-
-    const [startRow, startCol] = position;
     const answer: string[] = [];
+    const { row: startRow, col: startCol, length } = clue;
 
-    if (clue.direction === 'across') {
+    // Determine direction based on clue list
+    const isAcross = clues.across.includes(clue);
+    
+    if (isAcross) {
       // Read horizontally from the starting position
-      for (let col = startCol; col < size && answer.length < clue.answer.length; col++) {
-        if (startRow < size && !grid[startRow][col].isBlack) {
+      for (let col = startCol; col < size.cols && answer.length < length; col++) {
+        if (startRow < size.rows && !grid[startRow][col].isBlack) {
           answer.push(grid[startRow][col].value);
         }
       }
     } else {
       // Read vertically from the starting position
-      for (let row = startRow; row < size && answer.length < clue.answer.length; row++) {
-        if (startCol < size && !grid[row][startCol].isBlack) {
+      for (let row = startRow; row < size.rows && answer.length < length; row++) {
+        if (startCol < size.cols && !grid[row][startCol].isBlack) {
           answer.push(grid[row][startCol].value);
         }
       }
@@ -253,8 +214,8 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: `repeat(${size}, 1fr)`,
-            gridTemplateRows: `repeat(${size}, 1fr)`,
+            gridTemplateColumns: `repeat(${size.cols}, 1fr)`,
+            gridTemplateRows: `repeat(${size.rows}, 1fr)`,
             gap: 1,
             width: '100%',
             aspectRatio: '1 / 1',
@@ -335,7 +296,7 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
 
                           // First try to find an empty cell in the current direction
                           if (direction === 'across') {
-                            for (let c = colIndex + 1; c < size; c++) {
+                            for (let c = colIndex + 1; c < size.cols; c++) {
                               if (!grid[rowIndex][c].isBlack && !grid[rowIndex][c].value) {
                                 nextCol = c;
                                 foundEmpty = true;
@@ -348,7 +309,7 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
                               nextCol = 0;
                             }
                           } else {
-                            for (let r = rowIndex + 1; r < size; r++) {
+                            for (let r = rowIndex + 1; r < size.rows; r++) {
                               if (!grid[r][colIndex].isBlack && !grid[r][colIndex].value) {
                                 nextRow = r;
                                 foundEmpty = true;
@@ -363,20 +324,20 @@ const Crossword: React.FC<CrosswordProps> = ({ size, clues, selectedCell, setSel
                           }
 
                           // Find the next valid cell (skip black cells)
-                          while (nextRow < size && nextCol < size) {
+                          while (nextRow < size.rows && nextCol < size.cols) {
                             if (!grid[nextRow][nextCol].isBlack) {
                               handleCellClick(nextRow, nextCol);
                               break;
                             }
                             if (direction === 'across') {
                               nextCol++;
-                              if (nextCol >= size) {
+                              if (nextCol >= size.cols) {
                                 nextCol = 0;
                                 nextRow++;
                               }
                             } else {
                               nextRow++;
-                              if (nextRow >= size) {
+                              if (nextRow >= size.rows) {
                                 nextRow = 0;
                                 nextCol++;
                               }
