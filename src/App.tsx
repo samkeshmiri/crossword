@@ -13,11 +13,11 @@ const samplePuzzle: MiniCrosswordPuzzle = {
     cols: 5
   },
   grid: [
-    ["", "", "", "", ""],
-    ["", "", "", "", ""],
-    ["", "", "", "", ""],
-    ["", "", "", "", ""],
-    ["", "", "", "", ""]
+    ["S", "W", "A", "M", "P"],
+    ["L", "A", "B", "O", "R"],
+    ["A", "L", "O", "N", "E"],
+    ["S", "L", "U", "T", "S"],
+    ["H", "A", "T", "E", "S"]
   ],
   clues: {
     across: [
@@ -31,7 +31,7 @@ const samplePuzzle: MiniCrosswordPuzzle = {
       { number: 1, clue: "Opposite of fast", row: 0, col: 0, length: 5, answer: "SLASH" },
       { number: 2, clue: "To move through water", row: 0, col: 1, length: 5, answer: "WATER" },
       { number: 3, clue: "Not off", row: 0, col: 2, length: 5, answer: "ABOUT" },
-      { number: 4, clue: "Not out", row: 0, col: 3, length: 5, answer: "MONEY" },
+      { number: 4, clue: "A Spanish game", row: 0, col: 3, length: 5, answer: "MONTE" },
       { number: 5, clue: "Not in", row: 0, col: 4, length: 5, answer: "PRESS" },
     ],
   },
