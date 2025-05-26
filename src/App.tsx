@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Container, Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import Crossword from './components/Crossword';
 // Sample puzzle data
+// TODO update samplePuzzle to match a schema in which Crossword.tsx can use it
 const samplePuzzle = {
   size: 5,
   clues: {
@@ -86,7 +87,7 @@ function App() {
           }}>
             <Crossword 
               size={samplePuzzle.size} 
-              clues={samplePuzzle.clues} 
+              clues={samplePuzzle.clues}
               selectedCell={selectedCell}
               setSelectedCell={setSelectedCell}
               direction={direction}
