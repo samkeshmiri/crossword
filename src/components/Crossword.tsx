@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Typography, Paper } from '@mui/material';
-import { styled } from '@mui/material/styles';
-import type { MiniCrosswordPuzzle, Clue } from '../../types';
+import { Box } from '@mui/material';
+import type { MiniCrosswordPuzzle } from '../../types';
 import ErrorBar from './ErrorBar';
+import CrosswordCell from './CrosswordCell';
+import { isGridComplete, validateAnswers } from '../utils/crosswordUtils';
 
 interface Cell {
   value: string;
@@ -19,30 +20,6 @@ interface CrosswordProps {
   direction: 'across' | 'down';
   setDirection: (dir: 'across' | 'down') => void;
 }
-
-const CellInput = styled(TextField)(() => ({
-  '& .MuiInputBase-input': {
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    fontSize: '2.2rem',
-    padding: 0,
-    width: '100%',
-    height: '100%',
-    lineHeight: 1,
-    background: 'transparent',
-    border: 'none',
-    boxSizing: 'border-box',
-  },
-  '& .MuiOutlinedInput-root': {
-    height: '100%',
-    background: 'transparent',
-    borderRadius: 0,
-    boxShadow: 'none',
-    '& fieldset': {
-      border: 'none',
-    },
-  },
-}));
 
 const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelectedCell, direction, setDirection }) => {
   const { size, clues } = puzzle;
@@ -134,78 +111,83 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
     }
   };
 
-  // Function to check if all cells are filled
-  const isGridComplete = (grid: Cell[][]): boolean => {
-    for (let row = 0; row < size.rows; row++) {
-      for (let col = 0; col < size.cols; col++) {
-        if (!grid[row][col].isBlack && !grid[row][col].value) {
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-
-  // Function to extract answer from grid for a specific clue
-  const extractAnswerFromGrid = (grid: Cell[][], clue: Clue): string => {
-    const answer: string[] = [];
-    const { row: startRow, col: startCol, length } = clue;
-
-    // Determine direction based on clue list
-    const isAcross = clues.across.includes(clue);
-    
-    if (isAcross) {
-      // Read horizontally from the starting position
-      for (let col = startCol; col < size.cols && answer.length < length; col++) {
-        if (startRow < size.rows && !grid[startRow][col].isBlack) {
-          answer.push(grid[startRow][col].value);
-        }
-      }
-    } else {
-      // Read vertically from the starting position
-      for (let row = startRow; row < size.rows && answer.length < length; row++) {
-        if (startCol < size.cols && !grid[row][startCol].isBlack) {
-          answer.push(grid[row][startCol].value);
-        }
-      }
-    }
-
-    return answer.join('');
-  };
-
-  // Function to validate answers dynamically
-  const validateAnswers = (grid: Cell[][]): boolean => {
-    // Check all across clues
-    for (const clue of clues.across) {
-      const userAnswer = extractAnswerFromGrid(grid, clue);
-      if (userAnswer !== clue.answer) {
-        console.log(`Mismatch for ${clue.number}-across: expected "${clue.answer}", got "${userAnswer}"`);
-        return false;
-      }
-    }
-
-    // Check all down clues
-    for (const clue of clues.down) {
-      const userAnswer = extractAnswerFromGrid(grid, clue);
-      if (userAnswer !== clue.answer) {
-        console.log(`Mismatch for ${clue.number}-down: expected "${clue.answer}", got "${userAnswer}"`);
-        return false;
-      }
-    }
-
-    return true;
-  };
-
   // Function to check completion and validation
   const checkPuzzleCompletion = (newGrid: Cell[][]) => {
-    const isComplete = isGridComplete(newGrid);
+    const isComplete = isGridComplete(newGrid, size);
     
     if (isComplete) {
-      const isValid = validateAnswers(newGrid);
+      const isValid = validateAnswers(newGrid, clues, size);
       setShowErrorBanner(!isValid);
     } else {
       // Hide the banner if the grid is no longer complete
       setShowErrorBanner(false);
+    }
+  };
+
+  const handleCellChange = (rowIndex: number, colIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value.slice(-1).toUpperCase();
+    const newGrid = [...grid];
+    newGrid[rowIndex][colIndex].value = newValue;
+    setGrid(newGrid);
+
+    // Check puzzle completion after updating the grid
+    checkPuzzleCompletion(newGrid);
+
+    // Move to next cell if a letter was entered or if cell already had text
+    if (newValue || grid[rowIndex][colIndex].value) {
+      let nextRow = rowIndex;
+      let nextCol = colIndex;
+      let foundEmpty = false;
+
+      // First try to find an empty cell in the current direction
+      if (direction === 'across') {
+        for (let c = colIndex + 1; c < size.cols; c++) {
+          if (!grid[rowIndex][c].isBlack && !grid[rowIndex][c].value) {
+            nextCol = c;
+            foundEmpty = true;
+            break;
+          }
+        }
+        if (!foundEmpty) {
+          // If no empty cells found, move to next row
+          nextRow = rowIndex + 1;
+          nextCol = 0;
+        }
+      } else {
+        for (let r = rowIndex + 1; r < size.rows; r++) {
+          if (!grid[r][colIndex].isBlack && !grid[r][colIndex].value) {
+            nextRow = r;
+            foundEmpty = true;
+            break;
+          }
+        }
+        if (!foundEmpty) {
+          // If no empty cells found, move to next column
+          nextRow = 0;
+          nextCol = colIndex + 1;
+        }
+      }
+
+      // Find the next valid cell (skip black cells)
+      while (nextRow < size.rows && nextCol < size.cols) {
+        if (!grid[nextRow][nextCol].isBlack) {
+          handleCellClick(nextRow, nextCol);
+          break;
+        }
+        if (direction === 'across') {
+          nextCol++;
+          if (nextCol >= size.cols) {
+            nextCol = 0;
+            nextRow++;
+          }
+        } else {
+          nextRow++;
+          if (nextRow >= size.rows) {
+            nextRow = 0;
+            nextCol++;
+          }
+        }
+      }
     }
   };
 
@@ -225,140 +207,23 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
         >
           {grid.map((row, rowIndex) =>
             row.map((cell, colIndex) => (
-              <Paper
+              <CrosswordCell
                 key={`${rowIndex}-${colIndex}`}
-                elevation={cell.isSelected ? 3 : 1}
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  position: 'relative',
-                  backgroundColor: cell.isBlack ? 'black' : 'white',
-                  cursor: cell.isBlack ? 'default' : 'pointer',
-                  minWidth: 0,
-                  minHeight: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  p: 0,
+                cell={cell}
+                rowIndex={rowIndex}
+                colIndex={colIndex}
+                onCellClick={handleCellClick}
+                inputRef={(el) => {
+                  inputRefs.current[rowIndex][colIndex] = el;
                 }}
-                onClick={() => handleCellClick(rowIndex, colIndex)}
-              >
-                {!cell.isBlack && (
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: cell.isHighlighted ? 'rgba(0, 0, 255, 0.1)' : 'transparent',
-                    }}
-                  >
-                    {cell.number && (
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          position: 'absolute',
-                          top: 2,
-                          left: 2,
-                          fontSize: '0.6rem',
-                        }}
-                      >
-                        {cell.number}
-                      </Typography>
-                    )}
-                    <CellInput
-                      value={cell.value}
-                      inputRef={(el) => {
-                        inputRefs.current[rowIndex][colIndex] = el;
-                      }}
-                      onFocus={(e) => {
-                        if (cell.value) {
-                          e.target.select();
-                        }
-                      }}
-                      onChange={(e) => {
-                        const newValue = e.target.value.slice(-1).toUpperCase();
-                        const newGrid = [...grid];
-                        newGrid[rowIndex][colIndex].value = newValue;
-                        setGrid(newGrid);
-
-                        // Check puzzle completion after updating the grid
-                        checkPuzzleCompletion(newGrid);
-
-                        // Move to next cell if a letter was entered or if cell already had text
-                        if (newValue || cell.value) {
-                          let nextRow = rowIndex;
-                          let nextCol = colIndex;
-                          let foundEmpty = false;
-
-                          // First try to find an empty cell in the current direction
-                          if (direction === 'across') {
-                            for (let c = colIndex + 1; c < size.cols; c++) {
-                              if (!grid[rowIndex][c].isBlack && !grid[rowIndex][c].value) {
-                                nextCol = c;
-                                foundEmpty = true;
-                                break;
-                              }
-                            }
-                            if (!foundEmpty) {
-                              // If no empty cells found, move to next row
-                              nextRow = rowIndex + 1;
-                              nextCol = 0;
-                            }
-                          } else {
-                            for (let r = rowIndex + 1; r < size.rows; r++) {
-                              if (!grid[r][colIndex].isBlack && !grid[r][colIndex].value) {
-                                nextRow = r;
-                                foundEmpty = true;
-                                break;
-                              }
-                            }
-                            if (!foundEmpty) {
-                              // If no empty cells found, move to next column
-                              nextRow = 0;
-                              nextCol = colIndex + 1;
-                            }
-                          }
-
-                          // Find the next valid cell (skip black cells)
-                          while (nextRow < size.rows && nextCol < size.cols) {
-                            if (!grid[nextRow][nextCol].isBlack) {
-                              handleCellClick(nextRow, nextCol);
-                              break;
-                            }
-                            if (direction === 'across') {
-                              nextCol++;
-                              if (nextCol >= size.cols) {
-                                nextCol = 0;
-                                nextRow++;
-                              }
-                            } else {
-                              nextRow++;
-                              if (nextRow >= size.rows) {
-                                nextRow = 0;
-                                nextCol++;
-                              }
-                            }
-                          }
-                        }
-                      }}
-                      onKeyDown={(e) => handleKeyPress(e)}
-                      inputProps={{
-                        maxLength: 1,
-                        style: { textAlign: 'center' },
-                      }}
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      autoComplete="off"
-                    />
-                  </Box>
-                )}
-              </Paper>
+                onFocus={(e) => {
+                  if (cell.value) {
+                    e.target.select();
+                  }
+                }}
+                onChange={(e) => handleCellChange(rowIndex, colIndex, e)}
+                onKeyDown={handleKeyPress}
+              />
             ))
           )}
         </Box>
