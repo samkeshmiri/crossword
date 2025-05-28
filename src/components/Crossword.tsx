@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Typography, Paper, Snackbar, Alert } from '@mui/material';
+import { Box, TextField, Typography, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import type { MiniCrosswordPuzzle, Clue } from '../../types';
+import ErrorBar from './ErrorBar';
 
 interface Cell {
   value: string;
@@ -363,32 +364,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
         </Box>
       </Box>
       
-      <Snackbar 
-        open={showErrorBanner} 
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        sx={{ 
-          top: '20px !important',
-          '& .MuiAlert-root': {
-            width: '100%',
-            maxWidth: '400px',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-          }
-        }}
-      >
-        <Alert 
-          severity="error" 
-          variant="filled"
-          sx={{ 
-            width: '100%',
-            '& .MuiAlert-message': {
-              fontSize: '1rem',
-              fontWeight: 'medium',
-            }
-          }}
-        >
-          One or more letters incorrect
-        </Alert>
-      </Snackbar>
+      <ErrorBar open={showErrorBanner} />
     </>
   );
 };
