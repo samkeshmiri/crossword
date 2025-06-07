@@ -83,6 +83,55 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
     setGrid(prevGrid => updateValidationState(prevGrid));
   }, [isValidationEnabled, clues]);
 
+  // Handle external changes to selectedCell and direction (e.g., from clue navigation)
+  useEffect(() => {
+    if (selectedCell && grid.length > 0) {
+      const [row, col] = selectedCell;
+      
+      // Check if this cell is valid and not black
+      if (row >= 0 && row < size.rows && col >= 0 && col < size.cols && !grid[row][col].isBlack) {
+        // Update grid highlighting based on current selection and direction
+        const newGrid = grid.map(gridRow => gridRow.map(cell => ({
+          ...cell,
+          isSelected: false,
+          isHighlighted: false,
+        })));
+        
+        newGrid[row][col].isSelected = true;
+        
+        // Highlight cells in the current direction
+        if (direction === 'across') {
+          for (let c = 0; c < size.cols; c++) {
+            if (!newGrid[row][c].isBlack) {
+              newGrid[row][c].isHighlighted = true;
+            }
+          }
+        } else {
+          for (let r = 0; r < size.rows; r++) {
+            if (!newGrid[r][col].isBlack) {
+              newGrid[r][col].isHighlighted = true;
+            }
+          }
+        }
+        
+        // Apply validation state while preserving selection/highlighting
+        const validatedGrid = updateValidationState(newGrid);
+        setGrid(validatedGrid);
+        
+        // Focus the input for the selected cell
+        setTimeout(() => {
+          const input = inputRefs.current[row][col];
+          if (input) {
+            input.focus();
+            if (grid[row][col].value) {
+              input.select();
+            }
+          }
+        }, 0);
+      }
+    }
+  }, [selectedCell, direction, size.rows, size.cols]);
+
   const handleCellClick = (row: number, col: number) => {
     if (grid[row][col].isBlack) {
       logger.debug('INTERACTION', `Clicked on black cell at (${row}, ${col}) - ignoring`);
