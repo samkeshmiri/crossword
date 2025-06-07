@@ -5,6 +5,7 @@ import ErrorBar from './ErrorBar';
 import SuccessBar from './SuccessBar';
 import CrosswordCell from './CrosswordCell';
 import { isGridComplete, validateAnswers, getCorrectCharForCell } from '../utils/crosswordUtils';
+import logger from '../utils/logger';
 
 interface Cell {
   value: string;
@@ -30,6 +31,11 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [isValidationEnabled, setIsValidationEnabled] = useState(false);
   const inputRefs = React.useRef<(HTMLInputElement | null)[][]>([]);
+
+  // Log puzzle initialization
+  useEffect(() => {
+    logger.puzzleInit(puzzle);
+  }, [puzzle]);
 
   useEffect(() => {
     // Initialize empty grid
@@ -73,18 +79,25 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
 
   // Update validation when toggle changes
   useEffect(() => {
+    logger.validationToggle(isValidationEnabled);
     setGrid(prevGrid => updateValidationState(prevGrid));
   }, [isValidationEnabled, clues]);
 
   const handleCellClick = (row: number, col: number) => {
-    if (grid[row][col].isBlack) return;
+    if (grid[row][col].isBlack) {
+      logger.debug('INTERACTION', `Clicked on black cell at (${row}, ${col}) - ignoring`);
+      return;
+    }
     
     // Check if clicking on the same cell that's already selected
     const isSameCell = selectedCell && selectedCell[0] === row && selectedCell[1] === col;
     
+    logger.cellClick(row, col, direction, isSameCell || false);
+    
     if (isSameCell) {
       // Toggle direction when clicking the same cell
       const newDirection = direction === 'across' ? 'down' : 'across';
+      logger.directionChange(direction, newDirection, 'cell_click');
       setDirection(newDirection);
       
       // Update highlighting for the new direction
@@ -131,6 +144,12 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
 
   // Separate function for programmatic cell selection (doesn't change direction)
   const selectCell = (row: number, col: number) => {
+    logger.debug('SELECTION', `Selecting cell (${row}, ${col})`, {
+      previousCell: selectedCell,
+      direction,
+      highlightDirection: direction
+    });
+    
     const newGrid = grid.map(gridRow => gridRow.map(cell => ({
       ...cell,
       isSelected: false,
@@ -171,6 +190,9 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (!selectedCell) return;
+    
+    logger.keyPress(event.key, selectedCell, direction);
+    
     const [selectedRow, selectedCol] = selectedCell;
     let nextRow = selectedRow;
     let nextCol = selectedCol;
@@ -191,15 +213,31 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
         }
       }
     } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      if (direction !== 'across') {
+        logger.directionChange(direction, 'across', 'arrow_key');
+      }
       setDirection('across');
       nextCol = event.key === 'ArrowRight' ? selectedCol + 1 : selectedCol - 1;
     } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      if (direction !== 'down') {
+        logger.directionChange(direction, 'down', 'arrow_key');
+      }
       setDirection('down');
       nextRow = event.key === 'ArrowDown' ? selectedRow + 1 : selectedRow - 1;
     }
 
     if (nextRow >= 0 && nextRow < size.rows && nextCol >= 0 && nextCol < size.cols && !grid[nextRow][nextCol].isBlack) {
+      logger.debug('NAVIGATION', `Moving from (${selectedRow}, ${selectedCol}) to (${nextRow}, ${nextCol})`, {
+        trigger: event.key,
+        direction
+      });
       selectCell(nextRow, nextCol);
+    } else {
+      logger.debug('NAVIGATION', `Cannot move from (${selectedRow}, ${selectedCol}) - boundary reached`, {
+        attempted: [nextRow, nextCol],
+        trigger: event.key,
+        direction
+      });
     }
   };
 
@@ -209,10 +247,14 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
     
     if (isComplete) {
       const isValid = validateAnswers(newGrid, clues, size);
+      logger.gridComplete(true, isValid);
       setShowErrorBanner(!isValid);
       setShowSuccessBanner(isValid);
     } else {
       // Hide the banners if the grid is no longer complete
+      if (showErrorBanner || showSuccessBanner) {
+        logger.gridComplete(false);
+      }
       setShowErrorBanner(false);
       setShowSuccessBanner(false);
     }
@@ -220,6 +262,10 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
 
   const handleCellChange = (rowIndex: number, colIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value.slice(-1).toUpperCase();
+    const oldValue = grid[rowIndex][colIndex].value;
+    
+    logger.cellChange(rowIndex, colIndex, oldValue, newValue);
+    
     const newGrid = [...grid];
     newGrid[rowIndex][colIndex].value = newValue;
     
@@ -268,6 +314,11 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
       // Find the next valid cell (skip black cells)
       while (nextRow < size.rows && nextCol < size.cols) {
         if (!validatedGrid[nextRow][nextCol].isBlack) {
+          logger.debug('AUTO_NAVIGATION', `Auto-moving after letter entry from (${rowIndex}, ${colIndex}) to (${nextRow}, ${nextCol})`, {
+            direction,
+            foundEmpty,
+            newValue
+          });
           selectCell(nextRow, nextCol);
           break;
         }
