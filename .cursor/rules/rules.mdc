@@ -1,0 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Cursor Rules for Testing and Validation
+
+## Testing Priority
+1. Before implementing any new feature or making changes:
+   - Assess if the task requires testing
+   - If testing is needed, write tests first
+   - Follow Test-Driven Development (TDD) principles when appropriate
+
+## Validation Requirements
+1. After any code changes:
+   - Always run `npm test` to validate the changes
+   - Ensure all existing tests pass
+   - Fix any failing tests before proceeding
+
+## Testing Guidelines
+1. Write tests for:
+   - New features
+   - Bug fixes
+   - Refactoring
+   - Complex logic changes
+2. Test coverage should include:
+   - Unit tests
+   - Integration tests (where applicable)
+   - Edge cases
+   - Error handling
+
+## Code Quality
+1. Maintain existing test coverage
+2. Follow project testing patterns
+3. Document test cases clearly
+4. Keep tests focused and maintainable
