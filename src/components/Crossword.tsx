@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import { Box, Switch, FormControlLabel } from '@mui/material';
 import type { MiniCrosswordPuzzle } from '../../types';
 import ErrorBar from './ErrorBar';
 import SuccessBar from './SuccessBar';
 import CrosswordCell from './CrosswordCell';
-import { isGridComplete, validateAnswers } from '../utils/crosswordUtils';
+import { isGridComplete, validateAnswers, getCorrectCharForCell } from '../utils/crosswordUtils';
 
 interface Cell {
   value: string;
@@ -12,6 +12,7 @@ interface Cell {
   isBlack: boolean;
   isSelected: boolean;
   isHighlighted: boolean;
+  isIncorrect?: boolean;
 }
 
 interface CrosswordProps {
@@ -27,6 +28,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
   const [grid, setGrid] = useState<Cell[][]>([]);
   const [showErrorBanner, setShowErrorBanner] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [isValidationEnabled, setIsValidationEnabled] = useState(false);
   const inputRefs = React.useRef<(HTMLInputElement | null)[][]>([]);
 
   useEffect(() => {
@@ -37,12 +39,42 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
         isBlack: false,
         isSelected: false,
         isHighlighted: false,
+        isIncorrect: false,
       }))
     );
     setGrid(newGrid);
     // Initialize refs array
     inputRefs.current = Array(size.rows).fill(null).map(() => Array(size.cols).fill(null));
   }, [size]);
+
+  // Function to update validation state for all cells
+  const updateValidationState = (gridToUpdate: Cell[][]) => {
+    if (!isValidationEnabled) {
+      // Clear all incorrect markings when validation is disabled
+      return gridToUpdate.map(row => row.map(cell => ({
+        ...cell,
+        isIncorrect: false,
+      })));
+    }
+
+    return gridToUpdate.map((row, rowIndex) =>
+      row.map((cell, colIndex) => {
+        if (cell.isBlack || !cell.value) {
+          return { ...cell, isIncorrect: false };
+        }
+        
+        const correctChar = getCorrectCharForCell(rowIndex, colIndex, clues);
+        const isIncorrect = correctChar !== null && cell.value !== correctChar;
+        
+        return { ...cell, isIncorrect };
+      })
+    );
+  };
+
+  // Update validation when toggle changes
+  useEffect(() => {
+    setGrid(prevGrid => updateValidationState(prevGrid));
+  }, [isValidationEnabled, clues]);
 
   const handleCellClick = (row: number, col: number) => {
     if (grid[row][col].isBlack) return;
@@ -56,7 +88,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
       setDirection(newDirection);
       
       // Update highlighting for the new direction
-      const newGrid = grid.map(row => row.map(cell => ({
+      const newGrid = grid.map(gridRow => gridRow.map(cell => ({
         ...cell,
         isSelected: false,
         isHighlighted: false,
@@ -77,7 +109,10 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
           }
         }
       }
-      setGrid(newGrid);
+      
+      // Apply validation state while preserving selection/highlighting
+      const validatedGrid = updateValidationState(newGrid);
+      setGrid(validatedGrid);
     } else {
       // Different cell clicked - set new selection but keep same direction
       selectCell(row, col);
@@ -96,7 +131,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
 
   // Separate function for programmatic cell selection (doesn't change direction)
   const selectCell = (row: number, col: number) => {
-    const newGrid = grid.map(row => row.map(cell => ({
+    const newGrid = grid.map(gridRow => gridRow.map(cell => ({
       ...cell,
       isSelected: false,
       isHighlighted: false,
@@ -118,7 +153,10 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
         }
       }
     }
-    setGrid(newGrid);
+    
+    // Apply validation state while preserving selection/highlighting
+    const validatedGrid = updateValidationState(newGrid);
+    setGrid(validatedGrid);
     
     setTimeout(() => {
       const input = inputRefs.current[row][col];
@@ -184,10 +222,13 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
     const newValue = e.target.value.slice(-1).toUpperCase();
     const newGrid = [...grid];
     newGrid[rowIndex][colIndex].value = newValue;
-    setGrid(newGrid);
+    
+    // Apply validation state to all cells if validation is enabled
+    const validatedGrid = updateValidationState(newGrid);
+    setGrid(validatedGrid);
 
     // Check puzzle completion after updating the grid
-    checkPuzzleCompletion(newGrid);
+    checkPuzzleCompletion(validatedGrid);
 
     // Move to next cell if a letter was entered or if cell already had text
     if (newValue || grid[rowIndex][colIndex].value) {
@@ -198,7 +239,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
       // First try to find an empty cell in the current direction
       if (direction === 'across') {
         for (let c = colIndex + 1; c < size.cols; c++) {
-          if (!grid[rowIndex][c].isBlack && !grid[rowIndex][c].value) {
+          if (!validatedGrid[rowIndex][c].isBlack && !validatedGrid[rowIndex][c].value) {
             nextCol = c;
             foundEmpty = true;
             break;
@@ -211,7 +252,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
         }
       } else {
         for (let r = rowIndex + 1; r < size.rows; r++) {
-          if (!grid[r][colIndex].isBlack && !grid[r][colIndex].value) {
+          if (!validatedGrid[r][colIndex].isBlack && !validatedGrid[r][colIndex].value) {
             nextRow = r;
             foundEmpty = true;
             break;
@@ -226,7 +267,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
 
       // Find the next valid cell (skip black cells)
       while (nextRow < size.rows && nextCol < size.cols) {
-        if (!grid[nextRow][nextCol].isBlack) {
+        if (!validatedGrid[nextRow][nextCol].isBlack) {
           selectCell(nextRow, nextCol);
           break;
         }
@@ -249,6 +290,31 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
 
   return (
     <>
+      {/* Validation Toggle Button in very top right corner */}
+      <Box sx={{ 
+        position: 'fixed', 
+        top: 16, 
+        right: 16, 
+        zIndex: 1000 
+      }}>
+        <FormControlLabel
+          control={
+            <Switch 
+              checked={isValidationEnabled}
+              onChange={(e) => setIsValidationEnabled(e.target.checked)}
+              size="small"
+            />
+          }
+          label="Check Answers"
+          sx={{ 
+            fontSize: '0.75rem',
+            '& .MuiFormControlLabel-label': {
+              fontSize: '0.75rem'
+            }
+          }}
+        />
+      </Box>
+
       <Box sx={{ maxWidth: 400, margin: 'auto', p: 2 }}>
         <Box
           sx={{

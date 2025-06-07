@@ -8,6 +8,7 @@ interface Cell {
   isBlack: boolean;
   isSelected: boolean;
   isHighlighted: boolean;
+  isIncorrect?: boolean;
 }
 
 interface CrosswordCellProps {
@@ -64,6 +65,30 @@ const CrosswordCell: React.FC<CrosswordCellProps> = ({
             backgroundColor: cell.isHighlighted ? 'rgba(0, 0, 255, 0.1)' : 'transparent',
           }}
         >
+          {/* Red diagonal line for incorrect answers */}
+          {cell.isIncorrect && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'linear-gradient(45deg, transparent 48%, red 48%, red 52%, transparent 52%)',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                },
+              }}
+            />
+          )}
+          
           {cell.number && (
             <Typography
               variant="caption"
@@ -72,6 +97,7 @@ const CrosswordCell: React.FC<CrosswordCellProps> = ({
                 top: 2,
                 left: 2,
                 fontSize: '0.6rem',
+                zIndex: 2,
               }}
             >
               {cell.number}
@@ -85,7 +111,7 @@ const CrosswordCell: React.FC<CrosswordCellProps> = ({
             onKeyDown={onKeyDown}
             inputProps={{
               maxLength: 1,
-              style: { textAlign: 'center' },
+              style: { textAlign: 'center', zIndex: 2, position: 'relative' },
             }}
             variant="outlined"
             size="small"

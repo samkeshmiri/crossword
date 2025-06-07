@@ -74,4 +74,31 @@ export const validateAnswers = (
   }
 
   return true;
+};
+
+// Function to get the correct character for a specific cell
+export const getCorrectCharForCell = (
+  row: number,
+  col: number,
+  clues: { across: Clue[]; down: Clue[] }
+): string | null => {
+  // Check across clues
+  for (const clue of clues.across) {
+    const { row: startRow, col: startCol, length, answer } = clue;
+    if (startRow === row && col >= startCol && col < startCol + length) {
+      const charIndex = col - startCol;
+      return answer[charIndex]?.toUpperCase() || null;
+    }
+  }
+  
+  // Check down clues
+  for (const clue of clues.down) {
+    const { row: startRow, col: startCol, length, answer } = clue;
+    if (startCol === col && row >= startRow && row < startRow + length) {
+      const charIndex = row - startRow;
+      return answer[charIndex]?.toUpperCase() || null;
+    }
+  }
+  
+  return null;
 }; 
