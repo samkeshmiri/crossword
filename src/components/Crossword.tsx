@@ -46,6 +46,56 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
 
   const handleCellClick = (row: number, col: number) => {
     if (grid[row][col].isBlack) return;
+    
+    // Check if clicking on the same cell that's already selected
+    const isSameCell = selectedCell && selectedCell[0] === row && selectedCell[1] === col;
+    
+    if (isSameCell) {
+      // Toggle direction when clicking the same cell
+      const newDirection = direction === 'across' ? 'down' : 'across';
+      setDirection(newDirection);
+      
+      // Update highlighting for the new direction
+      const newGrid = grid.map(row => row.map(cell => ({
+        ...cell,
+        isSelected: false,
+        isHighlighted: false,
+      })));
+      newGrid[row][col].isSelected = true;
+      
+      // Highlight cells in the new direction
+      if (newDirection === 'across') {
+        for (let c = 0; c < size.cols; c++) {
+          if (!newGrid[row][c].isBlack) {
+            newGrid[row][c].isHighlighted = true;
+          }
+        }
+      } else {
+        for (let r = 0; r < size.rows; r++) {
+          if (!newGrid[r][col].isBlack) {
+            newGrid[r][col].isHighlighted = true;
+          }
+        }
+      }
+      setGrid(newGrid);
+    } else {
+      // Different cell clicked - set new selection but keep same direction
+      selectCell(row, col);
+    }
+    
+    setTimeout(() => {
+      const input = inputRefs.current[row][col];
+      if (input) {
+        input.focus();
+        if (grid[row][col].value) {
+          input.select();
+        }
+      }
+    }, 0);
+  };
+
+  // Separate function for programmatic cell selection (doesn't change direction)
+  const selectCell = (row: number, col: number) => {
     const newGrid = grid.map(row => row.map(cell => ({
       ...cell,
       isSelected: false,
@@ -53,7 +103,8 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
     })));
     newGrid[row][col].isSelected = true;
     setSelectedCell([row, col]);
-    // Highlight cells in the current word
+    
+    // Highlight cells in the current direction
     if (direction === 'across') {
       for (let c = 0; c < size.cols; c++) {
         if (!newGrid[row][c].isBlack) {
@@ -68,6 +119,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
       }
     }
     setGrid(newGrid);
+    
     setTimeout(() => {
       const input = inputRefs.current[row][col];
       if (input) {
@@ -109,7 +161,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
     }
 
     if (nextRow >= 0 && nextRow < size.rows && nextCol >= 0 && nextCol < size.cols && !grid[nextRow][nextCol].isBlack) {
-      handleCellClick(nextRow, nextCol);
+      selectCell(nextRow, nextCol);
     }
   };
 
@@ -175,7 +227,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
       // Find the next valid cell (skip black cells)
       while (nextRow < size.rows && nextCol < size.cols) {
         if (!grid[nextRow][nextCol].isBlack) {
-          handleCellClick(nextRow, nextCol);
+          selectCell(nextRow, nextCol);
           break;
         }
         if (direction === 'across') {

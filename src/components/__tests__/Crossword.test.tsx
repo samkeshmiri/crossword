@@ -29,6 +29,135 @@ const testPuzzle: MiniCrosswordPuzzle = {
 };
 
 describe('Crossword', () => {
+  describe('Direction Change Behavior', () => {
+    it('should change direction when clicking on the same cell twice', () => {
+      const setSelectedCell = jest.fn();
+      const setDirection = jest.fn();
+      
+      render(
+        <Crossword
+          puzzle={testPuzzle}
+          selectedCell={[0, 0]}
+          setSelectedCell={setSelectedCell}
+          direction="across"
+          setDirection={setDirection}
+        />
+      );
+
+      // Get the first cell input
+      const inputs = screen.getAllByRole('textbox');
+      
+      // Click on the same cell that's already selected
+      fireEvent.click(inputs[0]);
+      
+      // Should call setDirection to change from 'across' to 'down'
+      expect(setDirection).toHaveBeenCalledWith('down');
+    });
+
+    it('should change direction from down to across when clicking the same cell', () => {
+      const setSelectedCell = jest.fn();
+      const setDirection = jest.fn();
+      
+      render(
+        <Crossword
+          puzzle={testPuzzle}
+          selectedCell={[0, 0]}
+          setSelectedCell={setSelectedCell}
+          direction="down"
+          setDirection={setDirection}
+        />
+      );
+
+      // Get the first cell input
+      const inputs = screen.getAllByRole('textbox');
+      
+      // Click on the same cell that's already selected
+      fireEvent.click(inputs[0]);
+      
+      // Should call setDirection to change from 'down' to 'across'
+      expect(setDirection).toHaveBeenCalledWith('across');
+    });
+
+    it('should not change direction when clicking on a different cell', () => {
+      const setSelectedCell = jest.fn();
+      const setDirection = jest.fn();
+      
+      render(
+        <Crossword
+          puzzle={testPuzzle}
+          selectedCell={[0, 0]}
+          setSelectedCell={setSelectedCell}
+          direction="across"
+          setDirection={setDirection}
+        />
+      );
+
+      // Get the input elements
+      const inputs = screen.getAllByRole('textbox');
+      
+      // Click on a different cell
+      fireEvent.click(inputs[1]);
+      
+      // Should call setSelectedCell but not setDirection
+      expect(setSelectedCell).toHaveBeenCalledWith([0, 1]);
+      expect(setDirection).not.toHaveBeenCalled();
+    });
+
+    it('should set direction and select cell when no cell is currently selected', () => {
+      const setSelectedCell = jest.fn();
+      const setDirection = jest.fn();
+      
+      render(
+        <Crossword
+          puzzle={testPuzzle}
+          selectedCell={null}
+          setSelectedCell={setSelectedCell}
+          direction="across"
+          setDirection={setDirection}
+        />
+      );
+
+      // Get the first cell input
+      const inputs = screen.getAllByRole('textbox');
+      
+      // Click on a cell when none is selected
+      fireEvent.click(inputs[0]);
+      
+      // Should call setSelectedCell but not change direction
+      expect(setSelectedCell).toHaveBeenCalledWith([0, 0]);
+      expect(setDirection).not.toHaveBeenCalled();
+    });
+
+    it('should not change direction when typing a letter and moving to next cell', () => {
+      const setSelectedCell = jest.fn();
+      const setDirection = jest.fn();
+      
+      render(
+        <Crossword
+          puzzle={testPuzzle}
+          selectedCell={[0, 0]}
+          setSelectedCell={setSelectedCell}
+          direction="across"
+          setDirection={setDirection}
+        />
+      );
+
+      // Get the first cell input
+      const inputs = screen.getAllByRole('textbox');
+      
+      // Clear the mock calls from initial render
+      setSelectedCell.mockClear();
+      setDirection.mockClear();
+      
+      // Type a letter in the first cell
+      fireEvent.change(inputs[0], { target: { value: 'A' } });
+      
+      // Should move to next cell but not change direction
+      expect(setSelectedCell).toHaveBeenCalledWith([0, 1]);
+      expect(setDirection).not.toHaveBeenCalled();
+    });
+  });
+
   it('should show error banner when grid is complete but incorrect', () => {
     const setSelectedCell = jest.fn();
     const setDirection = jest.fn();
