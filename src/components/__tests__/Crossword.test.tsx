@@ -77,4 +77,30 @@ describe('Crossword', () => {
     const errorBanner = screen.queryByText('One or more letters incorrect');
     expect(errorBanner).not.toBeInTheDocument();
   });
+
+  it('should show success banner when grid is complete and correct', () => {
+    const setSelectedCell = jest.fn();
+    const setDirection = jest.fn();
+
+    render(
+      <Crossword
+        puzzle={testPuzzle}
+        selectedCell={null}
+        setSelectedCell={setSelectedCell}
+        direction="across"
+        setDirection={setDirection}
+      />
+    );
+
+    // Fill in correct answers
+    const inputs = screen.getAllByRole('textbox');
+    fireEvent.change(inputs[0], { target: { value: 'A' } });
+    fireEvent.change(inputs[1], { target: { value: 'B' } });
+    fireEvent.change(inputs[2], { target: { value: 'C' } });
+    fireEvent.change(inputs[3], { target: { value: 'D' } });
+
+    // Check if success banner is visible
+    const successBanner = screen.getByText("Congratulations! You've completed the puzzle!");
+    expect(successBanner).toBeVisible();
+  });
 }); 

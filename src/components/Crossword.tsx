@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
 import type { MiniCrosswordPuzzle } from '../../types';
 import ErrorBar from './ErrorBar';
+import SuccessBar from './SuccessBar';
 import CrosswordCell from './CrosswordCell';
 import { isGridComplete, validateAnswers } from '../utils/crosswordUtils';
 
@@ -25,6 +26,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
   const { size, clues } = puzzle;
   const [grid, setGrid] = useState<Cell[][]>([]);
   const [showErrorBanner, setShowErrorBanner] = useState(false);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const inputRefs = React.useRef<(HTMLInputElement | null)[][]>([]);
 
   useEffect(() => {
@@ -118,9 +120,11 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
     if (isComplete) {
       const isValid = validateAnswers(newGrid, clues, size);
       setShowErrorBanner(!isValid);
+      setShowSuccessBanner(isValid);
     } else {
-      // Hide the banner if the grid is no longer complete
+      // Hide the banners if the grid is no longer complete
       setShowErrorBanner(false);
+      setShowSuccessBanner(false);
     }
   };
 
@@ -230,6 +234,7 @@ const Crossword: React.FC<CrosswordProps> = ({ puzzle, selectedCell, setSelected
       </Box>
       
       <ErrorBar open={showErrorBanner} />
+      <SuccessBar open={showSuccessBanner} />
     </>
   );
 };
