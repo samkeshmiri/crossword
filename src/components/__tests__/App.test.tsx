@@ -1,7 +1,63 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from '../../App';
+
+// Mock the service factory to return synchronous data for testing
+jest.mock('../../services/serviceFactory', () => {
+  // Create a mock service that returns data immediately
+  const mockService = {
+    async getDailyPuzzle() {
+      return Promise.resolve({
+        date: "2025-01-20",
+        puzzle_id: "sample-mini-1",
+        title: "Sample Mini Crossword",
+        size: {
+          rows: 5,
+          cols: 5
+        },
+        grid: [
+          ["S", "W", "A", "M", "P"],
+          ["L", "A", "B", "O", "R"],
+          ["A", "L", "O", "N", "E"],
+          ["S", "L", "U", "T", "S"],
+          ["H", "A", "T", "E", "S"]
+        ],
+        clues: {
+          across: [
+            { number: 1, clue: "Wetland area", row: 0, col: 0, length: 5, answer: "SWAMP" },
+            { number: 4, clue: "Work or toil", row: 1, col: 0, length: 5, answer: "LABOR" },
+            { number: 6, clue: "By oneself", row: 2, col: 0, length: 5, answer: "ALONE" },
+            { number: 8, clue: "Promiscuous people", row: 3, col: 0, length: 5, answer: "SLUTS" },
+            { number: 10, clue: "Strongly dislikes", row: 4, col: 0, length: 5, answer: "HATES" },
+          ],
+          down: [
+            { number: 1, clue: "Opposite of fast", row: 0, col: 0, length: 5, answer: "SLASH" },
+            { number: 2, clue: "To move through water", row: 0, col: 1, length: 5, answer: "WALLA" },
+            { number: 3, clue: "Not off", row: 0, col: 2, length: 5, answer: "ABOUT" },
+            { number: 4, clue: "A Spanish game", row: 0, col: 3, length: 5, answer: "MONTE" },
+            { number: 5, clue: "Irish cupboard", row: 0, col: 4, length: 5, answer: "PRESS" },
+          ],
+        },
+      });
+    },
+    async getPuzzle() {
+      return this.getDailyPuzzle();
+    }
+  };
+  
+  return {
+    puzzleService: mockService,
+    createPuzzleService: () => mockService
+  };
+});
+
+// Helper function to wait for app to load
+const waitForAppToLoad = async () => {
+  await waitFor(() => {
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+};
 
 // Mock console methods to avoid log output during tests
 beforeEach(() => {
@@ -15,8 +71,13 @@ afterEach(() => {
 
 describe('App Component', () => {
   describe('Clue Navigation', () => {
-    it('should render navigation arrows', () => {
+    it('should render navigation arrows', async () => {
       render(<App />);
+      
+      // Wait for the puzzle to load
+      await waitFor(() => {
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      });
       
       // Check for navigation buttons by finding all buttons
       const buttons = screen.getAllByRole('button');
@@ -24,20 +85,22 @@ describe('App Component', () => {
       expect(buttons.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('should display current clue text', () => {
+    it('should display current clue text', async () => {
       render(<App />);
       
-      // Should display a clue (the first clue should be selected by default)
-      // Look for clue text - should not show "Select a cell" since a cell is auto-selected
-      const clueDisplay = screen.getByText(/wetland area/i);
-      expect(clueDisplay).toBeInTheDocument();
+      // Wait for puzzle to load and clue to appear
+      await waitFor(() => {
+        expect(screen.getByText(/wetland area/i)).toBeInTheDocument();
+      });
     });
 
-    it('should navigate to next clue when next button is clicked', () => {
+    it('should navigate to next clue when next button is clicked', async () => {
       render(<App />);
       
-      // Get the initial clue text
-      expect(screen.getByText(/wetland area/i)).toBeInTheDocument();
+      // Wait for puzzle to load and initial clue to appear
+      await waitFor(() => {
+        expect(screen.getByText(/wetland area/i)).toBeInTheDocument();
+      });
       
       // Find and click the next button (right arrow)
       const buttons = screen.getAllByRole('button');
@@ -49,11 +112,14 @@ describe('App Component', () => {
       fireEvent.click(nextButton!);
       
       // Should now show the second clue
-      expect(screen.getByText(/work or toil/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/work or toil/i)).toBeInTheDocument();
+      });
     });
 
-    it('should navigate to previous clue when previous button is clicked', () => {
+    it('should navigate to previous clue when previous button is clicked', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       // First navigate to second clue
       const buttons = screen.getAllByRole('button');
@@ -69,11 +135,14 @@ describe('App Component', () => {
       fireEvent.click(prevButton!);
       
       // Should be back to the first clue
-      expect(screen.getByText(/wetland area/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/wetland area/i)).toBeInTheDocument();
+      });
     });
 
-    it('should wrap around when navigating past the last clue', () => {
+    it('should wrap around when navigating past the last clue', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       const buttons = screen.getAllByRole('button');
       const nextButton = buttons.find(button => 
@@ -87,11 +156,14 @@ describe('App Component', () => {
       }
       
       // Should wrap back to the first clue
-      expect(screen.getByText(/wetland area/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/wetland area/i)).toBeInTheDocument();
+      });
     });
 
-    it('should wrap around when navigating before the first clue', () => {
+    it('should wrap around when navigating before the first clue', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       const buttons = screen.getAllByRole('button');
       const prevButton = buttons.find(button => 
@@ -102,11 +174,14 @@ describe('App Component', () => {
       fireEvent.click(prevButton!);
       
       // Should now show the last clue (last down clue)
-      expect(screen.getByText(/irish cupboard/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/irish cupboard/i)).toBeInTheDocument();
+      });
     });
 
-    it('should change direction when navigating from across to down clues', () => {
+    it('should change direction when navigating from across to down clues', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       const buttons = screen.getAllByRole('button');
       const nextButton = buttons.find(button => 
@@ -119,11 +194,14 @@ describe('App Component', () => {
       }
       
       // Should now be on the first down clue
-      expect(screen.getByText(/opposite of fast/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/opposite of fast/i)).toBeInTheDocument();
+      });
     });
 
-    it('should update crossword selection when navigating between clues', () => {
+    it('should update crossword selection when navigating between clues', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       // Get initial crossword state - first cell should be selected
       const inputs = screen.getAllByRole('textbox');
@@ -143,23 +221,26 @@ describe('App Component', () => {
   });
 
   describe('Crossword Integration', () => {
-    it('should display timer', () => {
+    it('should display timer', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       // Should show timer in MM:SS format (00:00 or 00:01 etc)
       expect(screen.getByText(/\d{2}:\d{2}/)).toBeInTheDocument();
     });
 
-    it('should render crossword grid', () => {
+    it('should render crossword grid', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       // Should render multiple input boxes for the crossword grid
       const inputs = screen.getAllByRole('textbox');
       expect(inputs.length).toBeGreaterThan(1);
     });
 
-    it('should handle cell selection in crossword affecting clue display', () => {
+    it('should handle cell selection in crossword affecting clue display', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       // Click on a different cell in the crossword
       const inputs = screen.getAllByRole('textbox');
@@ -175,14 +256,16 @@ describe('App Component', () => {
   });
 
   describe('Responsive Layout', () => {
-    it('should render main title', () => {
+    it('should render main title', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       expect(screen.getByText('CWORD')).toBeInTheDocument();
     });
 
-    it('should display clue navigation area', () => {
+    it('should display clue navigation area', async () => {
       render(<App />);
+      await waitForAppToLoad();
       
       // Should have the navigation arrows
       const buttons = screen.getAllByRole('button');

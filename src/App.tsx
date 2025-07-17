@@ -1,49 +1,38 @@
 import { useState, useEffect } from 'react';
-import { Container, Box, Typography, useTheme, useMediaQuery, IconButton } from '@mui/material';
+import { Container, Box, Typography, useTheme, useMediaQuery, IconButton, CircularProgress, Alert } from '@mui/material';
 import { ArrowBackIos, ArrowForwardIos } from '@mui/icons-material';
 import Crossword from './components/Crossword';
+import { puzzleService } from './services/serviceFactory';
 import type { MiniCrosswordPuzzle, Clue } from '../types';
-
-// Sample puzzle data
-const samplePuzzle: MiniCrosswordPuzzle = {
-  date: "2025-01-20",
-  puzzle_id: "sample-mini-1",
-  title: "Sample Mini Crossword",
-  size: {
-    rows: 5,
-    cols: 5
-  },
-  grid: [
-    ["S", "W", "A", "M", "P"],
-    ["L", "A", "B", "O", "R"],
-    ["A", "L", "O", "N", "E"],
-    ["S", "L", "U", "T", "S"],
-    ["H", "A", "T", "E", "S"]
-  ],
-  clues: {
-    across: [
-      { number: 1, clue: "Wetland area", row: 0, col: 0, length: 5, answer: "SWAMP" },
-      { number: 4, clue: "Work or toil", row: 1, col: 0, length: 5, answer: "LABOR" },
-      { number: 6, clue: "By oneself", row: 2, col: 0, length: 5, answer: "ALONE" },
-      { number: 8, clue: "Promiscuous people", row: 3, col: 0, length: 5, answer: "SLUTS" },
-      { number: 10, clue: "Strongly dislikes", row: 4, col: 0, length: 5, answer: "HATES" },
-    ],
-    down: [
-      { number: 1, clue: "Opposite of fast", row: 0, col: 0, length: 5, answer: "SLASH" },
-      { number: 2, clue: "To move through water", row: 0, col: 1, length: 5, answer: "WALLA" },
-      { number: 3, clue: "Not off", row: 0, col: 2, length: 5, answer: "ABOUT" },
-      { number: 4, clue: "A Spanish game", row: 0, col: 3, length: 5, answer: "MONTE" },
-      { number: 5, clue: "Irish cupboard", row: 0, col: 4, length: 5, answer: "PRESS" },
-    ],
-  },
-};
 
 function App() {
   const [seconds, setSeconds] = useState(0);
+  const [puzzle, setPuzzle] = useState<MiniCrosswordPuzzle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
   const [direction, setDirection] = useState<'across' | 'down'>('across');
+
+  // Load puzzle on component mount
+  useEffect(() => {
+    const loadPuzzle = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const puzzleData = await puzzleService.getDailyPuzzle();
+        setPuzzle(puzzleData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load puzzle');
+        console.error('Failed to load puzzle:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPuzzle();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -84,12 +73,14 @@ function App() {
 
   // Get all clues in proper navigation order (across first, then down)
   const getAllClues = (): Clue[] => {
-    return [...samplePuzzle.clues.across, ...samplePuzzle.clues.down];
+    if (!puzzle) return [];
+    return [...puzzle.clues.across, ...puzzle.clues.down];
   };
 
   // Get current clue index in the combined list
   const getCurrentClueIndex = (): number => {
-    const currentClue = getCurrentClue(samplePuzzle.clues, selectedCell, direction);
+    if (!puzzle) return -1;
+    const currentClue = getCurrentClue(puzzle.clues, selectedCell, direction);
     
     console.log('🔍 getCurrentClueIndex - START:', {
       selectedCell,
@@ -115,15 +106,15 @@ function App() {
       answer: c.answer,
       row: c.row,
       col: c.col,
-      section: i < samplePuzzle.clues.across.length ? 'across' : 'down'
+      section: i < puzzle.clues.across.length ? 'across' : 'down'
     })));
     
-    // If we're in across direction, look for the clue in the across section (indices 0-4)
-    // If we're in down direction, look for the clue in the down section (indices 5-9)
+    // If we're in across direction, look for the clue in the across section
+    // If we're in down direction, look for the clue in the down section
     if (direction === 'across') {
-      console.log('🔄 Searching in ACROSS clues (indices 0-4)');
+      console.log('🔄 Searching in ACROSS clues');
       // Look for the current clue in the across clues (first part of allClues)
-      for (let i = 0; i < samplePuzzle.clues.across.length; i++) {
+      for (let i = 0; i < puzzle.clues.across.length; i++) {
         const clue = allClues[i];
         const matches = clue.number === currentClue.number && 
             clue.row === currentClue.row && 
@@ -140,10 +131,10 @@ function App() {
         }
       }
     } else {
-      console.log('🔄 Searching in DOWN clues (indices 5-9)');
+      console.log('🔄 Searching in DOWN clues');
       // Look for the current clue in the down clues (second part of allClues)
-      const downStartIndex = samplePuzzle.clues.across.length;
-      for (let i = 0; i < samplePuzzle.clues.down.length; i++) {
+      const downStartIndex = puzzle.clues.across.length;
+      for (let i = 0; i < puzzle.clues.down.length; i++) {
         const clue = allClues[downStartIndex + i];
         const matches = clue.number === currentClue.number && 
             clue.row === currentClue.row && 
@@ -167,6 +158,8 @@ function App() {
 
   // Navigate to a specific clue
   const navigateToClue = (clue: Clue) => {
+    if (!puzzle) return;
+    
     console.log('🎯 navigateToClue called with:', {
       clue: {
         number: clue.number,
@@ -179,13 +172,13 @@ function App() {
     // Determine if this is an across or down clue by checking which array it comes from
     const allClues = getAllClues();
     const clueIndex = allClues.indexOf(clue);
-    const isAcrossClue = clueIndex < samplePuzzle.clues.across.length;
+    const isAcrossClue = clueIndex < puzzle.clues.across.length;
     
     const newDirection = isAcrossClue ? 'across' : 'down';
     
     console.log('🎯 navigateToClue decisions:', {
       clueIndex,
-      acrossCluesCount: samplePuzzle.clues.across.length,
+      acrossCluesCount: puzzle.clues.across.length,
       isAcrossClue,
       newDirection,
       willSetSelectedCell: [clue.row, clue.col],
@@ -257,13 +250,43 @@ function App() {
 
   // Initialize with first clue if no cell is selected
   useEffect(() => {
-    if (!selectedCell) {
+    if (!selectedCell && puzzle) {
       const allClues = getAllClues();
       if (allClues.length > 0) {
         navigateToClue(allClues[0]);
       }
     }
-  }, []);
+  }, [puzzle, selectedCell]);
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ my: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ my: 4 }}>
+          <Alert severity="error">{error}</Alert>
+        </Box>
+      </Container>
+    );
+  }
+
+  if (!puzzle) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ my: 4 }}>
+          <Alert severity="warning">No puzzle data available</Alert>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg">
@@ -285,7 +308,7 @@ function App() {
             minWidth: 0,
           }}>
             <Crossword 
-              puzzle={samplePuzzle}
+              puzzle={puzzle}
               selectedCell={selectedCell}
               setSelectedCell={setSelectedCell}
               direction={direction}
@@ -314,7 +337,7 @@ function App() {
                 
                 <Box sx={{ flex: 1, textAlign: 'center' }}>
                   <Typography variant="body1">
-                    {getCurrentClue(samplePuzzle.clues, selectedCell, direction)?.clue || 'Select a cell'}
+                    {getCurrentClue(puzzle.clues, selectedCell, direction)?.clue || 'Select a cell'}
                   </Typography>
                 </Box>
                 
